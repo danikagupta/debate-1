@@ -62,7 +62,7 @@ class debateAgent:
     # We already have topic, so need to move to Aff!!
     if (current_step == "topic"):
       next_step = "AffOpen"
-      return {"output": f"Topic is {topic}", "step": next_step}
+      return {"output": f"**Topic**: {topic}", "step": next_step}
     else:
       topic=state['topic']
       aff_case=state['affCase']
@@ -98,10 +98,12 @@ class debateAgent:
       next_step = "Judgement"
     return {"negCase":resp, "step": next_step}
 
-st_topic=st.empty()
+with st.container(border=True):
+    st_topic=st.empty()
 
-col1,col2,col3=st.columns(3)
+col1,col2,col3=st.columns(3, border=True)
 col1.header("Judge")
+col1msg=col1.empty()
 col2.header("Aff")
 col3.header("Neg")
 
@@ -120,9 +122,9 @@ if topic:
         for k,v in s.items():
             if k=='Judge':
                 if v.get('step')=='AffOpen':
-                   col1.write(v.get('output'))
+                   col1msg.write(v.get('output'))
                 else:
-                    col1.write(v.get("judging"))
+                    col1msg.write(v.get("judging"))
             if k=='Aff':
                 col2.write(v.get("affCase"))
             if k=='Neg':
