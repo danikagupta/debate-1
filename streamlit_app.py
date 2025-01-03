@@ -97,6 +97,8 @@ class debateAgent:
       resp=llm_response.content
       next_step = "Judgement"
     return {"negCase":resp, "step": next_step}
+  
+st.set_page_config(layout="wide")
 
 with st.container(border=True):
     st_topic=st.empty()
