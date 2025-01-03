@@ -14,6 +14,21 @@ from pydantic import BaseModel
 from langchain_core.messages import AnyMessage, SystemMessage, HumanMessage, AIMessage, ChatMessage
 import random
 
+st.set_page_config(layout="wide")
+
+DEFAULT_JUDGE="You are an expert Judge of debates. Review the topic, AFF and NEG case below and delivery your verdict, with explanation."
+DEFAULT_AFF="You are an expert debater. Create a strong AFF case for the topic below."
+DEFAULT_NEG="You are an expert debater. Create a strong NEG case for the topic below."
+
+if "Judge" not in st.session_state:
+   st.session_state['Judge']=DEFAULT_JUDGE
+
+if "Aff" not in st.session_state:
+   st.session_state['Aff']=DEFAULT_AFF
+
+if "Neg" not in st.session_state:
+   st.session_state['Neg']=DEFAULT_NEG
+
 
 class AgentState(TypedDict):
   agent: str
@@ -23,6 +38,9 @@ class AgentState(TypedDict):
   output: str
   step: str
   topic: str
+  judge_pr: str
+  aff_pr: str
+  neg_pr: str
 
 def create_llm_message(prompt:str, messages:List):
   llm_msg=[]
@@ -67,8 +85,8 @@ class debateAgent:
       topic=state['topic']
       aff_case=state['affCase']
       neg_case=state['negCase']
-      JUDGE_PROMPT="You are an expert Judge of debates. Review the topic, AFF and NEG case below and delivery your verdict, with explanation."
-      llm_messages = create_llm_message(JUDGE_PROMPT,[f"Topic: {topic}",f"Aff case: {aff_case}",f"Neg case: {neg_case}"])
+      pr=state['judge_pr']
+      llm_messages = create_llm_message(pr,[f"Topic: {topic}",f"Aff case: {aff_case}",f"Neg case: {neg_case}"])
       llm_response = self.model.invoke(llm_messages)
       resp=llm_response.content
       next_step = END
@@ -79,8 +97,8 @@ class debateAgent:
     current_step = state['step']
     if (current_step == "AffOpen"):
       topic=state['topic']
-      AFF_PROMPT="You are an expert debater. Create a strong AFF case for the topic below."
-      llm_messages = create_llm_message(AFF_PROMPT,[topic])
+      pr=state['aff_pr']
+      llm_messages = create_llm_message(pr,[topic])
       llm_response = self.model.invoke(llm_messages)
       resp=llm_response.content
       next_step = "NegOpen"
@@ -91,17 +109,26 @@ class debateAgent:
     current_step = state['step']
     if (current_step == "NegOpen"):
       topic=state['topic']
-      NEG_PROMPT="You are an expert debater. Create a strong NEG case for the topic below."
-      llm_messages = create_llm_message(NEG_PROMPT,[topic])
+      pr=state['neg_pr']
+      llm_messages = create_llm_message(pr,[topic])
       llm_response = self.model.invoke(llm_messages)
       resp=llm_response.content
       next_step = "Judgement"
     return {"negCase":resp, "step": next_step}
   
-st.set_page_config(layout="wide")
+
+
 
 with st.container(border=True):
     st_topic=st.empty()
+
+with st.sidebar:
+   judge_pr=st.text_area("Judge",value=st.session_state['Judge'])
+   aff_pr=st.text_area("Aff",value=st.session_state['Aff'])
+   neg_pr=st.text_area("Neg",value=st.session_state['Neg'])
+   st.session_state['Judge']=judge_pr
+   st.session_state['Aff']=aff_pr
+   st.session_state['Neg']=neg_pr
 
 col1,col2,col3=st.columns(3, border=True)
 col1.header("Judge")
@@ -116,7 +143,7 @@ if topic:
     thread_id=random.randint(1000, 9999)
     thread={"configurable":{"thread_id":thread_id}}
 
-    for s in app.graph.stream({'step': "topic","topic":topic}, thread):
+    for s in app.graph.stream({'step': "topic","topic":topic,"judge_pr":judge_pr, "aff_pr":aff_pr, "neg_pr":neg_pr}, thread):
         print(f"DEBUG {s=}")
         #for k,v in s.items():
         #    if resp := v.get("output"):
